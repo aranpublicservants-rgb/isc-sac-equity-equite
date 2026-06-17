@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISC Equity Data Explorer: find the barriers, ask for the data</title>
+<meta name="description" content="Every published employment equity figure for Indigenous Services Canada, scoped to the department, read against ISC's own workforce availability, and built to surface barriers and generate the data requests that unearth them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --spruce:#173129;            /* primary ink */
+    --spruce-2:#21463a;
+    --birch:#f6f3ec;             /* page bg */
+    --card:#fffefa;              /* surface */
+    --rule:#d6cfbe;
+    --ink-2:#3f463d;             /* secondary text, AA on birch */
+    --link:#1f5854;             /* AA link */
+    --link-h:#11302d;
+    --clay:#bf8a2e;             /* NON-TEXT accent only: ticks, borders, swatches */
+    --clay-text:#785611;        /* clay-toned text, AA on light */
+    --below:#9e2a2a;            /* below benchmark, text + fill, white passes on fill */
+    --above:#1f6b3a;            /* at/above benchmark text */
+    --above-fill:#246b41;
+    --gold:#ecd29a;             /* light gold, dark bg only */
+    --mist:#cfe0d7;             /* light text on dark */
+    --shadow:0 1px 0 rgba(23,49,41,.05), 0 10px 30px -22px rgba(23,49,41,.5);
+    --focus:#0b5fce;            /* high-contrast focus ring */
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--birch);color:var(--spruce);
+    font-family:'Noto Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  a{color:var(--link);text-underline-offset:2px}
+  a:hover{color:var(--link-h)}
+  h1,h2,h3,h4{font-family:'Lato',Arial,sans-serif;line-height:1.12;letter-spacing:-.005em}
+  h1{font-weight:900} h2,h3{font-weight:700}
+  .vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+  .skip{position:absolute;left:-999px;top:0}
+  .skip:focus{left:8px;top:8px;background:#fff;padding:10px 14px;z-index:60;border:2px solid var(--spruce);border-radius:6px}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:3px}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 22px}
+  .eyebrow{font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--clay-text)}
+
+  /* ---- utility / identity strip ---- */
+  .gcbar{background:var(--spruce);color:var(--mist);font-size:12.5px;padding:7px 0}
+  .gcbar .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+  .gcbar b{color:#fff;font-weight:700}
+  .gcbar .ind{font-family:'Noto Sans Mono',monospace;color:var(--gold)}
+
+  /* ---- masthead ---- */
+  .mast{background:var(--card);border-bottom:1px solid var(--rule);padding:22px 0 20px}
+  .mast .eyebrow{color:var(--clay-text)}
+  .mast h1{font-size:clamp(27px,4.6vw,44px);margin:.12em 0 .12em;color:var(--spruce)}
+  .mast p{margin:0;max-width:66ch;color:var(--ink-2);font-size:15.5px}
+  .mast .meta{margin-top:12px;font-family:'Noto Sans Mono',monospace;font-size:12px;color:var(--ink-2)}
+
+  /* ---- hero signature ---- */
+  .hero{background:linear-gradient(180deg,#12281f 0%, #173129 70%);color:#fff;padding:34px 0 40px;border-bottom:4px solid var(--clay)}
+  .hero .eyebrow{color:var(--gold)}
+  .hero h2{color:#fff;font-size:clamp(20px,3vw,28px);margin:.2em 0 .25em;max-width:24ch}
+  .hero .lede{color:var(--mist);max-width:66ch;margin:0 0 24px;font-size:15px}
+  .barset{display:grid;gap:20px}
+  .bar-row{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:center}
+  @media(max-width:680px){.bar-row{grid-template-columns:1fr;gap:6px}}
+  .bar-label{font-size:14.5px;color:#fff}
+  .bar-label .who{display:block;font-family:'Noto Sans Mono',monospace;font-size:12px;color:var(--mist);font-weight:400;margin-top:2px}
+  .track{position:relative;height:36px;background:rgba(255,255,255,.1);border-radius:4px}
+  .fill{height:100%;border-radius:4px 0 0 4px;display:flex;align-items:center;justify-content:flex-end;
+    padding-right:9px;font-size:13px;font-weight:700;color:#fff;min-width:42px;transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  .fill.up{background:var(--above-fill)} .fill.down{background:var(--below)}
+  .tick{position:absolute;top:-7px;bottom:-7px;width:3px;background:var(--clay);z-index:3;border-radius:2px}
+  .tick .tl{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-family:'Noto Sans Mono',monospace;font-size:11px;color:var(--gold);white-space:nowrap}
+  .bar-status{font-family:'Noto Sans Mono',monospace;font-size:12px;color:var(--mist);margin-top:5px}
+  .bar-status .up{color:#9ad8b1} .bar-status .down{color:#f0a3a3}
+  .legend{display:flex;gap:20px;flex-wrap:wrap;font-family:'Noto Sans Mono',monospace;font-size:12px;color:var(--mist);margin-top:22px}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+  .hero-note{margin-top:16px;font-size:12.5px;color:#9fb3a9;max-width:74ch}
+
+  /* ---- tabs ---- */
+  .tabs-outer{position:sticky;top:0;z-index:30;background:var(--birch);border-bottom:1px solid var(--rule);box-shadow:0 6px 16px -16px rgba(0,0,0,.5)}
+  .tabs{display:flex;flex-wrap:wrap;gap:2px;max-width:1140px;margin:0 auto;padding:6px 14px}
+  .tab{appearance:none;background:none;border:0;font:inherit;font-size:14px;color:var(--ink-2);padding:9px 12px;
+    border-radius:7px 7px 0 0;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+  .tab:hover{color:var(--spruce);background:#eee7d6}
+  .tab[aria-selected="true"]{color:var(--spruce);font-weight:700;border-bottom-color:var(--clay);background:#eee7d6}
+  .tab .n{font-family:'Noto Sans Mono',monospace;color:var(--clay-text);font-size:12px;margin-right:7px}
+
+  main{max-width:1140px;margin:0 auto;padding:30px 22px 72px}
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .panel>h2{font-size:clamp(22px,3.3vw,32px);margin:.1em 0 .15em}
+  .panel>.sub{color:var(--ink-2);max-width:74ch;margin:.2em 0 24px;font-size:16px}
+  section.block{margin:34px 0;scroll-margin-top:70px}
+  section.block>h3{font-size:21px;margin:0 0 5px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  section.block>h3 .tag{font-family:'Noto Sans Mono',monospace;font-size:12px;color:var(--clay-text);font-weight:500}
+  section.block>p{color:var(--ink-2);max-width:76ch;margin:.3em 0 14px}
+
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow);margin:16px 0}
+  .card.flush{padding:0;overflow:hidden}
+  .card h4{margin:0 0 6px;font-size:16px}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+  @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--clay);border-radius:10px;padding:14px 16px}
+  .stat .big{font-family:'Lato',sans-serif;font-weight:900;font-size:31px;line-height:1}
+  .stat .big.down{color:var(--below)} .stat .big.up{color:var(--above)}
+  .stat .cap{font-size:12.5px;color:var(--ink-2);margin-top:7px;line-height:1.4}
+
+  /* source labels */
+  .chip{display:inline-block;font-family:'Noto Sans Mono',monospace;font-size:10.5px;letter-spacing:.05em;
+    text-transform:uppercase;padding:2px 7px;border-radius:5px;vertical-align:middle;border:1px solid;font-weight:500}
+  .chip.official{color:#234a3c;border-color:#8fb6a3;background:#e7f1ea}
+  .chip.computed{color:#13524e;border-color:#94c2bf;background:#e2efee}
+  .chip.enter{color:#6e520f;border-color:#cbb27a;background:#f4ecd7}
+  .chip.interp{color:#6f3636;border-color:#cf9f9f;background:#f3e4e4}
+
+  /* tables */
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:580px}
+  caption{caption-side:top;text-align:left;font-size:12.5px;color:var(--ink-2);padding:12px 16px 2px;font-style:italic}
+  th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{background:#eee7d6;font-size:12px;letter-spacing:.02em;text-transform:uppercase;color:var(--spruce)}
+  tbody tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right}
+  .down-c{color:var(--below);font-weight:700} .up-c{color:var(--above);font-weight:700}
+  .toolbar{display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+  .btn{appearance:none;font:inherit;font-size:13px;border:1px solid var(--rule);background:#fff;color:var(--spruce);
+    padding:8px 14px;border-radius:8px;cursor:pointer}
+  .btn:hover{background:#eee7d6;border-color:#c0b79f}
+  .btn.primary{background:var(--spruce);color:#fff;border-color:var(--spruce)}
+  .btn.primary:hover{background:var(--spruce-2)}
+
+  /* callouts */
+  .callout{border-left:5px solid var(--link);background:#e9f1f0;border-radius:0 10px 10px 0;padding:14px 18px;margin:16px 0;font-size:14.5px}
+  .callout.warn{border-left-color:var(--clay);background:#f6efdc}
+  .callout.flag{border-left-color:var(--below);background:#f5e7e7}
+  .callout h4{margin:0 0 5px;font-family:'Noto Sans',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+
+  ul.tight{margin:.4em 0;padding-left:1.2em} ul.tight li{margin:.32em 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px} @media(max-width:780px){.grid2{grid-template-columns:1fr}}
+
+  /* barrier register */
+  .filterbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 18px}
+  .filterbar label{font-size:13px;color:var(--ink-2)}
+  select,input[type=number],textarea{font:inherit;font-size:14px;border:1px solid var(--rule);background:#fff;color:var(--spruce);border-radius:8px;padding:9px 11px}
+  select:hover{border-color:#b9b09a}
+  .barrier{border:1px solid var(--rule);border-radius:12px;background:var(--card);box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
+  .barrier>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;gap:12px;align-items:flex-start}
+  .barrier>summary::-webkit-details-marker{display:none}
+  .barrier .bid{font-family:'Noto Sans Mono',monospace;font-weight:700;color:#fff;background:var(--below);border-radius:6px;padding:3px 9px;font-size:13px;flex:none;margin-top:2px}
+  .barrier.mild .bid{background:var(--clay-text)}
+  .barrier .btitle{font-family:'Lato',sans-serif;font-weight:700;font-size:17px}
+  .barrier .btags{font-family:'Noto Sans Mono',monospace;font-size:11px;color:var(--ink-2);margin-top:3px}
+  .barrier .body{padding:0 18px 18px 18px;border-top:1px solid var(--rule)}
+  .barrier .irr{display:grid;grid-template-columns:120px 1fr;gap:4px 16px;margin:12px 0;font-size:14.5px}
+  @media(max-width:620px){.barrier .irr{grid-template-columns:1fr}}
+  .barrier .irr dt{font-weight:700;color:var(--spruce)}
+  .barrier .irr dd{margin:0 0 8px;color:var(--ink-2)}
+  .barrier .hook{font-family:'Noto Sans Mono',monospace;font-size:12px;background:#eef1ea;border:1px solid var(--rule);border-radius:7px;padding:8px 11px;color:var(--spruce)}
+  .barrier .ask{margin-top:10px}
+
+  /* generator + calculator */
+  .tool{background:var(--card);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);padding:22px;margin:18px 0}
+  .tool h3{margin:0 0 4px}
+  fieldset{border:1px solid var(--rule);border-radius:10px;padding:14px 16px;margin:14px 0}
+  legend{font-weight:700;font-size:14px;padding:0 8px}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--rule);font-size:14px}
+  .check:last-child{border-bottom:0}
+  .check input{margin-top:4px;width:18px;height:18px;flex:none}
+  .check .meta{font-family:'Noto Sans Mono',monospace;font-size:11px;color:var(--ink-2);display:block;margin-top:2px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media(max-width:680px){.row{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:5px;margin:8px 0}
+  .field label{font-size:13px;font-weight:600;color:var(--spruce)}
+  .output{white-space:pre-wrap;font-family:'Noto Sans Mono',monospace;font-size:13px;line-height:1.5;background:#0f231c;color:#e7efe9;border-radius:10px;padding:16px 18px;margin-top:14px;border:1px solid #0a1813;max-height:460px;overflow:auto}
+  .calc-out{font-size:15px;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid var(--rule);background:#eef1ea}
+  .calc-out .verdict{font-weight:700;font-family:'Lato',sans-serif;font-size:18px}
+  .calc-out .verdict.down{color:var(--below)} .calc-out .verdict.up{color:var(--above)}
+  .gcbar .langtoggle{color:var(--gold);font-weight:700}
+  .cmp input{width:96px}
+  .delta.worse{color:var(--below);font-weight:700} .delta.better{color:var(--above);font-weight:700}
+  .steps{counter-reset:s;list-style:none;padding-left:0;margin:.5em 0}
+  .steps li{counter-increment:s;position:relative;padding-left:42px;margin:.55em 0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:28px;height:28px;border-radius:50%;
+    background:var(--spruce);color:#fff;font-family:'Lato',sans-serif;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:14px}
+
+  details.def{border:1px solid var(--rule);border-radius:10px;background:var(--card);margin:10px 0;padding:0 16px}
+  details.def summary{cursor:pointer;padding:13px 0;font-weight:600}
+  details.def[open] summary{border-bottom:1px solid var(--rule);margin-bottom:10px}
+  .src{font-family:'Noto Sans Mono',monospace;font-size:11.5px;color:var(--ink-2);margin-top:8px}
+
+  footer{background:var(--spruce);color:var(--mist);font-size:13px;padding:26px 0 40px}
+  footer a{color:var(--gold)}
+
+  @media(prefers-reduced-motion:reduce){.fill{transition:none}.panel{animation:none}}
+  @media print{.tabs-outer,.toolbar,.legend,.gcbar{display:none!important}.panel{display:block!important;page-break-before:always}body{background:#fff}.output{color:#000;background:#fff;border:1px solid #999}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="gcbar"><div class="wrap">
+  <span><b>ISC Equity Data Explorer</b> · built from published Government of Canada data</span>
+  <span class="ind">Independent analytical tool · not an official Government of Canada product · <a class="langtoggle" href="index-fra.html" lang="fr" hreflang="fr">Français</a></span>
+</div></div>
+
+<header class="mast"><div class="wrap">
+  <p class="eyebrow">Indigenous Services Canada · core public administration</p>
+  <h1>Find the barriers. Ask for the data.</h1>
+  <p>Every published employment equity figure for Indigenous Services Canada, scoped to the department and read against ISC's own workforce availability. Then two things the source numbers do not give you: a register that names the barriers, and a generator that writes the formal request for the data ISC holds but does not publish.</p>
+  <p class="meta">Representation as of March 31, 2024 · PSES benchmarks 2024 cycle · compiled June 2026</p>
+</div></header>
+
+<!-- ============ HERO SIGNATURE ============ -->
+<section class="hero" aria-labelledby="hero-h"><div class="wrap">
+  <p class="eyebrow">The fact that frames everything else</p>
+  <h2 id="hero-h">ISC carries more Indigenous employees than any other federal department, and falls short for two groups it exists to defend</h2>
+  <p class="lede">Each bar is ISC's representation for a designated group. The gold marker is ISC's own departmental workforce availability, the share you would expect from ISC's jobs and regions. Read the bar against its marker, not against the bar next to it.</p>
+
+  <div class="barset" role="list" aria-label="ISC representation against ISC workforce availability">
+    <div class="bar-row" role="listitem">
+      <div class="bar-label">Indigenous Peoples<span class="who">2,232 employees</span></div>
+      <div>
+        <div class="track" aria-hidden="true"><div class="fill up" data-w="27.4">27.4%</div><div class="tick" style="left:5.7%"><span class="tl">avail. 5.7%</span></div></div>
+        <p class="bar-status">27.4% represented · <span class="up">21.7 points above</span> the 5.7% benchmark · 1,768 people above expected</p>
+      </div>
+    </div>
+    <div class="bar-row" role="listitem">
+      <div class="bar-label">Women<span class="who">5,705 employees</span></div>
+      <div>
+        <div class="track" aria-hidden="true"><div class="fill up" data-w="70.0">70.0%</div><div class="tick" style="left:66.3%"><span class="tl">avail. 66.3%</span></div></div>
+        <p class="bar-status">70.0% represented · <span class="up">3.7 points above</span> the 66.3% benchmark</p>
+      </div>
+    </div>
+    <div class="bar-row" role="listitem">
+      <div class="bar-label">Members of visible minorities<span class="who">1,635 employees</span></div>
+      <div>
+        <div class="track" aria-hidden="true"><div class="fill down" data-w="20.1">20.1%</div><div class="tick" style="left:22.8%"><span class="tl">avail. 22.8%</span></div></div>
+        <p class="bar-status">20.1% represented · <span class="down">2.7 points below</span> the 22.8% benchmark · 227 people short</p>
+      </div>
+    </div>
+    <div class="bar-row" role="listitem">
+      <div class="bar-label">Persons with disabilities<span class="who">657 employees</span></div>
+      <div>
+        <div class="track" aria-hidden="true"><div class="fill down" data-w="8.1">8.1%</div><div class="tick" style="left:12.0%"><span class="tl">avail. 12.0%</span></div></div>
+        <p class="bar-status">8.1% represented · <span class="down">3.9 points below</span> the 12.0% benchmark · 320 people short</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i class="sw" style="background:var(--above-fill)"></i> at or above ISC availability</span>
+    <span><i class="sw" style="background:var(--below)"></i> below ISC availability</span>
+    <span><i class="sw" style="background:var(--clay);width:4px;height:16px"></i> ISC workforce availability</span>
+  </div>
+  <p class="hero-note">Bars and markers share one 0 to 100 percent scale. Figures transcribed from TBS departmental representation tables, March 31, 2024. ISC population in scope: 8,148.</p>
+</div></section>
+
+<!-- ============ TABS ============ -->
+<div class="tabs-outer"><div class="tabs" role="tablist" aria-label="Sections">
+  <button class="tab" role="tab" aria-selected="true"  id="t0" aria-controls="p0"><span class="n">01</span>Start here</button>
+  <button class="tab" role="tab" aria-selected="false" id="t1" aria-controls="p1"><span class="n">02</span>The four groups</button>
+  <button class="tab" role="tab" aria-selected="false" id="t2" aria-controls="p2"><span class="n">03</span>Indigenous workforce</button>
+  <button class="tab" role="tab" aria-selected="false" id="t3" aria-controls="p3"><span class="n">04</span>Disability &amp; accommodation</button>
+  <button class="tab" role="tab" aria-selected="false" id="t4" aria-controls="p4"><span class="n">05</span>Employee survey</button>
+  <button class="tab" role="tab" aria-selected="false" id="t5" aria-controls="p5"><span class="n">06</span>Barrier register</button>
+  <button class="tab" role="tab" aria-selected="false" id="t6" aria-controls="p6"><span class="n">07</span>Request the data</button>
+  <button class="tab" role="tab" aria-selected="false" id="t7" aria-controls="p7"><span class="n">08</span>Context</button>
+  <button class="tab" role="tab" aria-selected="false" id="t8" aria-controls="p8"><span class="n">09</span>Sources &amp; access</button>
+</div></div>
+
+<main id="main">
+
+<!-- ===== 01 START HERE ===== -->
+<div class="panel active" id="p0" role="tabpanel" aria-labelledby="t0" tabindex="0">
+  <h2>Start here</h2>
+  <p class="sub">This tool does three jobs: it shows where ISC's equity groups stand against ISC's own benchmark, it names the barriers those numbers point to, and it writes the data request that turns a hunch into evidence. Pick the job you came for.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>See where a group stands</h4>
+      <p style="margin:.3em 0;color:var(--ink-2);font-size:14.5px">Representation, gaps in people and points, and what to investigate.</p>
+      <p style="margin:.3em 0"><a href="#" data-go="1">The four groups</a> · <a href="#" data-go="2">Indigenous workforce</a> · <a href="#" data-go="3">Disability &amp; accommodation</a></p>
+    </div>
+    <div class="card">
+      <h4>Find a barrier</h4>
+      <p style="margin:.3em 0;color:var(--ink-2);font-size:14.5px">Each one framed as issue, risk, recommendation, the data that proves it, and the law it attaches to.</p>
+      <p style="margin:.3em 0"><a href="#" data-go="5">Open the barrier register</a></p>
+    </div>
+    <div class="card">
+      <h4>Ask for the data ISC holds</h4>
+      <p style="margin:.3em 0;color:var(--ink-2);font-size:14.5px">A generator that writes a formal internal request, names the source system, and cites the obligation.</p>
+      <p style="margin:.3em 0"><a href="#" data-go="6">Open the request generator</a></p>
+    </div>
+    <div class="card">
+      <h4>Hear from people</h4>
+      <p style="margin:.3em 0;color:var(--ink-2);font-size:14.5px">What ISC employees reported about discrimination, harassment and accommodation.</p>
+      <p style="margin:.3em 0"><a href="#" data-go="4">Employee survey</a> · <a href="#" data-go="3">accommodation audit</a></p>
+    </div>
+  </div>
+
+  <section class="block">
+    <h3>How to read what you see</h3>
+    <ul class="tight">
+      <li><b>Bar against a marker.</b> The bar is ISC's actual representation. The gold marker is ISC's own departmental workforce availability. Short of the marker means below benchmark, and the text beside every bar says so in words, not only colour.</li>
+      <li><b>Gaps in people, not just points.</b> A 3.9 point disability gap is 320 colleagues. Points get rounded in a briefing. People do not.</li>
+      <li><b>The label tells you the source.</b> <span class="chip official">official</span> transcribed from TBS, PSC or ISC. <span class="chip computed">computed</span> a gap or share worked from official figures. <span class="chip enter">enter</span> a value you supply. <span class="chip interp">interpretation</span> a hypothesis to test, never a finding.</li>
+      <li><b>"supp." means suppressed.</b> Counts of 1 to 5 are withheld to protect privacy. Suppressed is not zero.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>Three cautions, because a number out of context does harm</h3>
+    <div class="callout warn"><h4>One · a flag is a place to look, not a verdict</h4>A gap against ISC's own availability says investigate here. It does not say non-compliance. Workforce availability is a floor under the Employment Equity Act, not a ceiling, and TBS says as much.</div>
+    <div class="callout warn"><h4>Two · the count understates the problem where trust is lowest</h4>Self-identification is voluntary. When people do not trust the workplace, they self-identify less, which thins the very numbers that would expose the worst units. Treat self-ID completion as an outcome, not a footnote.</div>
+    <div class="callout warn"><h4>Three · the most damning data is the data ISC will not find here</h4>Executive representation by level, the First Nations, Inuit and Métis split, acting appointments, accommodation timelines. None of it is published at the department grain. The <a href="#" data-go="6">request generator</a> exists for exactly that.</div>
+  </section>
+
+  <section class="block">
+    <h3>From a flag to an ask, in four steps</h3>
+    <p>The tool is built to be used in this order. Each step has a home in one of the tabs.</p>
+    <ol class="steps">
+      <li><b>Spot the gap.</b> A red bar or a negative gap against ISC's own availability. See <a href="#" data-go="1">The four groups</a>.</li>
+      <li><b>Name the barrier.</b> Match the gap to an entry in the register: issue, risk, recommendation. See <a href="#" data-go="5">Barrier register</a>.</li>
+      <li><b>Find the data that proves it.</b> Each barrier lists the internal dataset that would confirm or kill it.</li>
+      <li><b>Ask for it in writing.</b> The generator writes the request with the source system and the legal hook attached. See <a href="#" data-go="6">Request the data</a>.</li>
+    </ol>
+  </section>
+
+  <section class="block">
+    <h3>Why ISC is held to its own bar</h3>
+    <p>ISC's 2024-25 Departmental Results Report describes the department's mandate as confronting "historical and ongoing systemic racism and discrimination rooted in colonialism," and points to Joyce's Principle, its commitment against anti-Indigenous racism in health systems. A department that names systemic racism as the harm it exists to undo cannot treat the same patterns inside its own workforce as a culture problem to be managed. That reframing runs through this whole tool: racism and discrimination here are organizational hazards with legal definitions, not values to aspire to.</p>
+    <p class="src">Source: ISC 2024-25 Departmental Results Report. <span class="chip official">official</span></p>
+  </section>
+</div>
+
+<!-- ===== 02 FOUR GROUPS ===== -->
+<div class="panel" id="p1" role="tabpanel" aria-labelledby="t1" tabindex="0">
+  <h2>The four designated groups at ISC</h2>
+  <p class="sub">Representation against ISC's departmental workforce availability, the legal benchmark under the Employment Equity Act. ISC's availability differs from the public-service line because its occupation mix and heavy regional and northern footprint move the expected shares. Judge ISC against the national average and you flatter it on Indigenous representation while excusing it on disability.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="big">8,148</div><div class="cap">employees in scope for employment equity <span class="chip official">official</span></div></div>
+    <div class="stat"><div class="big up">+1,768</div><div class="cap">Indigenous employees above what ISC's benchmark predicts <span class="chip computed">computed</span></div></div>
+    <div class="stat"><div class="big down">−320</div><div class="cap">persons with disabilities below ISC's 12.0% benchmark <span class="chip computed">computed</span></div></div>
+    <div class="stat"><div class="big down">−227</div><div class="cap">racialized employees below ISC's 22.8% benchmark <span class="chip computed">computed</span></div></div>
+  </div>
+
+  <div class="card flush">
+    <div class="toolbar">
+      <button class="btn" data-copy="groupTable">Copy table</button>
+      <button class="btn" data-csv="groupTable" data-name="ISC-four-groups.csv">Download CSV</button>
+      <button class="btn" onclick="window.print()">Print / PDF</button>
+    </div>
+    <div class="tablewrap">
+      <table id="groupTable">
+        <caption>ISC representation by designated group with departmental workforce availability, March 31, 2024. Source: TBS Employment Equity representation by department tables.</caption>
+        <thead><tr>
+          <th scope="col">Designated group</th><th scope="col" class="num">In group</th><th scope="col" class="num">Represented</th>
+          <th scope="col" class="num">ISC avail.</th><th scope="col" class="num">Expected</th><th scope="col" class="num">Gap (people)</th>
+          <th scope="col" class="num">Gap (points)</th><th scope="col">Status</th>
+        </tr></thead>
+        <tbody>
+          <tr><th scope="row">Women</th><td class="num">5,705</td><td class="num">70.0%</td><td class="num">66.3%</td><td class="num">5,398</td><td class="num up-c">+307</td><td class="num up-c">+3.7</td><td class="up-c">Above</td></tr>
+          <tr><th scope="row">Indigenous Peoples</th><td class="num">2,232</td><td class="num">27.4%</td><td class="num">5.7%</td><td class="num">464</td><td class="num up-c">+1,768</td><td class="num up-c">+21.7</td><td class="up-c">Far above</td></tr>
+          <tr><th scope="row">Persons with disabilities</th><td class="num">657</td><td class="num down-c">8.1%</td><td class="num">12.0%</td><td class="num">977</td><td class="num down-c">−320</td><td class="num down-c">−3.9</td><td class="down-c">Below</td></tr>
+          <tr><th scope="row">Members of visible minorities</th><td class="num">1,635</td><td class="num down-c">20.1%</td><td class="num">22.8%</td><td class="num">1,862</td><td class="num down-c">−227</td><td class="num down-c">−2.7</td><td class="down-c">Below</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="block">
+    <h3>Indigenous Peoples <span class="tag">27.4% · +21.7 points</span></h3>
+    <p>The figure that defines ISC, and a real achievement worth protecting through workforce adjustment. The open question is not presence, it is distribution. A single aggregate cannot tell you whether First Nations, Inuit and Métis employees reach the executive cadre, or sit mostly in feeder and regional roles. ISC's own Reconciliation evaluation already reports targeted recruitment to raise Indigenous representation in leadership, which is a quiet admission that 27.4 percent does not hold all the way up. The annual table stops here. The PSC dashboard goes further.</p>
+    <p class="src">TBS Indigenous Peoples representation by department, March 31, 2024: 2,232 of 8,148; expected 464; gap +1,768; 27.4% vs 5.7% ISC availability. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Persons with disabilities <span class="tag">8.1% · −3.9 points</span></h3>
+    <p>ISC's largest shortfall, and the one with the most evidence stacked behind it. The 320 person gap is not a quirk of measurement. ISC's own consultations and the Better Accommodation Project audit describe under-recruitment running alongside an accommodation process employees call dehumanizing. Representation and lived experience point the same way, which is rare, and which is why this gap should carry more weight than its size alone suggests. Detail in <a href="#" data-go="3">Disability &amp; accommodation</a>.</p>
+    <p class="src">TBS Persons with disabilities representation by department, March 31, 2024: 657; expected 977; gap −320; 8.1% vs 12.0% ISC availability. Part of the gap reflects the broader 2017+ survey definition the self-ID form does not yet match. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Members of visible minorities <span class="tag">20.1% · −2.7 points</span></h3>
+    <p>The quiet gap, easy to lose in a department whose equity attention runs toward Indigenous employees, understandably. 1,635 racialized employees against an expected 1,862 is 227 colleagues short. ISC's 2026-2028 Accessibility Plan names racialized, Black and 2SLGBTQI+ employees as carrying compounded barriers, sharpest at the intersection with disability. The split inside "visible minority," the distance between, say, South Asian and Black representation, lives only in the PSC dashboard, never in the annual table.</p>
+    <p class="src">TBS Members of visible minorities representation by department, March 31, 2024: 1,635; expected 1,862; gap −227; 20.1% vs 22.8% ISC availability. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Women <span class="tag">70.0% · +3.7 points</span></h3>
+    <p>Above benchmark at 5,705. The number worth chasing is not the headline, it is the spread across occupational categories and the executive ranks, where public-service data shows women dense in administrative roles and thin in technical and operational ones. ISC's own category split is not embedded here; pull it from the snapshot tables when a file turns on it.</p>
+    <p class="src">TBS Women representation by department, March 31, 2024: 5,705; expected 5,398; gap +307; 70.0% vs 66.3%. Sex is taken from the pay system, not self-ID. <span class="chip official">official</span></p>
+  </section>
+</div>
+
+<!-- ===== 03 INDIGENOUS WORKFORCE ===== -->
+<div class="panel" id="p2" role="tabpanel" aria-labelledby="t2" tabindex="0">
+  <h2>Indigenous workforce: presence is not the whole story</h2>
+  <p class="sub">27.4 percent is real and worth defending. It is also one aggregate hiding the questions that matter for a department whose mandate is Indigenous self-determination: which nations are present, at what levels, and whether the people serving First Nations, Inuit and Métis communities reflect those communities at the table where decisions get made.</p>
+
+  <section class="block">
+    <h3>The split this page cannot show, and why it bites</h3>
+    <p>TBS publishes Indigenous representation as one number per department. The breakdown into First Nations, Inuit, Métis and other Indigenous exists, but only public-service-wide in the snapshot, and department-by-subgroup inside the PSC dashboard. For a department serving distinct nations, an undifferentiated total can hide Inuit underrepresentation relative to the northern communities ISC serves directly, through nursing stations, Jordan's Principle and the Inuit Child First Initiative.</p>
+    <div class="callout"><h4>Pull ISC's First Nations, Inuit and Métis split</h4>The <a href="https://www5.psc-cfp.gc.ca/dsad-dsda/ee-by-org/index-en.html" target="_blank" rel="noopener">PSC employment equity by organization dashboard</a> reports employees, applicants, hires, promotions and acting appointments by Indigenous subgroup for each department. It is the only public source for ISC's subgroup distribution and for acting appointments, the rehearsal space for promotion that no annual table prints. The <a href="#" data-go="6">request generator</a> writes the internal ask if you need it by level and tenure.</div>
+  </section>
+
+  <section class="block">
+    <h3>The infrastructure ISC already runs</h3>
+    <p>ISC houses national Indigenous-inclusion capacity most departments borrow from elsewhere. These are places to send employees, and bodies that can generate the disaggregated data this page is missing.</p>
+    <div class="grid2">
+      <div class="card"><h4>Knowledge Circle for Indigenous Inclusion</h4><p style="margin:.3em 0 0;font-size:14px;color:var(--ink-2)">National hub for Indigenous inclusion and cultural protocols, and home of the Indigenous Cultures, Protocols and Accessibility Resource Centre. Anchors the Indigenous lens across ISC's equity and accessibility work.</p></div>
+      <div class="card"><h4>Indigenous Career Navigators Program</h4><p style="margin:.3em 0 0;font-size:14px;color:var(--ink-2)">Volunteer program supporting First Nations, Métis and Inuit employees across the federal service on recruitment, retention, development and advancement, and advising hiring managers.</p></div>
+      <div class="card"><h4>Indigenous Employee Networks, "By Us, For Us"</h4><p style="margin:.3em 0 0;font-size:14px;color:var(--ink-2)">Employee-led circles built into ISC's Reconciliation commitments. A collective voice and a route to leadership for Indigenous staff.</p></div>
+      <div class="card"><h4>Elders Lodges</h4><p style="margin:.3em 0 0;font-size:14px;color:var(--ink-2)">Named in ISC's accessibility consultations as cultural support that lifts workplace wellness and productivity for Indigenous employees.</p></div>
+    </div>
+    <p class="src">ISC Evaluation of efforts towards Reconciliation; ISC 2026-2028 Accessibility Plan; ISC Info Source. <span class="chip official">official</span></p>
+  </section>
+
+  <div class="callout flag"><h4>The barrier hiding in the headline <span class="chip interp">interpretation</span></h4>High aggregate Indigenous representation can mask a thin executive layer and uneven representation across nations. <b>Test:</b> pull subgroup-by-level from the PSC dashboard, set it against the populations ISC serves, and report the distance. If 27.4 percent collapses toward the top, the barrier is advancement, not entry.</div>
+</div>
+
+<!-- ===== 04 DISABILITY ===== -->
+<div class="panel" id="p3" role="tabpanel" aria-labelledby="t3" tabindex="0">
+  <h2>Disability and accommodation: where the gap and the experience agree</h2>
+  <p class="sub">This is the one place ISC's representation shortfall and its employees' own words line up. Two independent sources, ISC's 2023-24 internal consultation and the interdepartmental Better Accommodation Project audit, describe the same thing: people with disabilities are under-recruited, and those already inside meet an accommodation process they call slow, bureaucratic and dehumanizing.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="big down">8.1%</div><div class="cap">disability representation vs 12.0% ISC benchmark <span class="chip official">official</span></div></div>
+    <div class="stat"><div class="big">256</div><div class="cap">ISC employees with disabilities surveyed in the BAP audit, plus 90 managers <span class="chip official">official</span></div></div>
+    <div class="stat"><div class="big">77.3%</div><div class="cap">of disabled respondents were unaware of the GC Accessibility Passport (2023) <span class="chip official">official</span></div></div>
+    <div class="stat"><div class="big">37.5%</div><div class="cap">of accommodation requests in the prior two years were still in progress, not resolved <span class="chip official">official</span></div></div>
+  </div>
+
+  <section class="block">
+    <h3>What the 2023-24 internal consultation found</h3>
+    <ul class="tight">
+      <li><b>25.8%</b> felt they had experienced attitudinal barriers at work; <b>17.0%</b> had watched a co-worker experience them.</li>
+      <li>Accommodation outcomes over two years: <b>50%</b> received it, <b>5.0%</b> were refused, <b>37.5%</b> were still waiting, <b>7.5%</b> got a measure that was not the one they asked for.</li>
+      <li><b>27.9%</b> felt well supported by IT with accessible software; <b>8.2%</b> did not feel supported and did not know whom to ask.</li>
+      <li><b>84.1%</b> found virtual meetings fully accessible, which leaves roughly one in six who did not.</li>
+    </ul>
+    <p class="src">ISC and IOGC 2023-2025 Accessibility Plan, internal employee consultation. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>What the Better Accommodation Project audit added</h3>
+    <p>ISC joined the interdepartmental BAP and ran an external audit of its accommodation process. The findings tracked the internal consultation closely. Employees described a process built more around fiscal constraint than individual need, with delays sometimes lasting years, documentation demands that fall on the employee, and an experience they named as dehumanizing. Two Indigenous Talking Circles, facilitated by an Elder and opened by Deputy Minister Champions, surfaced the compounded barriers Indigenous employees with disabilities meet at the intersection of colonialism, ableism and a process never designed to be culturally safe.</p>
+    <p class="src">ISC and IOGC 2026-2028 Accessibility Plan, issued December 2025. 256 employees with disabilities and 90 managers surveyed; subset interviewed; two Indigenous Talking Circles held. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>ISC's response, and the test of it</h3>
+    <p>ISC is rebuilding its Duty to Accommodate process on the social model of disability, removing systemic barriers instead of demanding medical proof, with a "yes by default" posture for low-cost accommodations where the starting point is trust. The direction is right. The proof is a number, and it belongs in departmental reporting: time from request to implementation, tracked beside disability separations. If the redesign works, the delay shrinks and the retention gap narrows. If only the policy language changes, neither moves.</p>
+    <div class="callout flag"><h4>The disability triple bind <span class="chip interp">interpretation</span></h4>Under-recruitment (8.1% against 12.0%), an accommodation process employees call dehumanizing, and requests rising sharply from 2020 to 2024. Three failures compounding, not one. Fix hiring without fixing accommodation and retention and you fill a leaking bucket. <b>Unearth it with:</b> request-to-implementation time by year, against separations by disability status. Generate that request in <a href="#" data-go="6">Request the data</a>.</div>
+  </section>
+</div>
+
+<!-- ===== 05 EMPLOYEE SURVEY ===== -->
+<div class="panel" id="p4" role="tabpanel" aria-labelledby="t4" tabindex="0">
+  <h2>Employee survey (PSES 2024)</h2>
+  <p class="sub">Representation shows who is present. The survey shows what happens to them once they are. ISC's own results, for every question and every demographic group, live in the federal results pages and cannot be copied wholesale here. This tab embeds the public-service benchmarks you read ISC against, and links you straight to ISC's page.</p>
+
+  <div class="callout"><h4>Open ISC's own 2024 PSES results</h4>ISC is organization 17. Open the <a href="https://www.tbs-sct.canada.ca/pses-saff/2024/results-resultats/en/bq-pq/index" target="_blank" rel="noopener">2024 PSES results-by-question index</a> and select Indigenous Services Canada, or use the <a href="https://hrdatahub-centrededonneesrh.tbs-sct.gc.ca/PSES/Home/Index?GoCTemplateCulture=en-CA" target="_blank" rel="noopener">PSES Data Analytics tool</a> for results split by Indigenous identity, disability or racialized status within ISC. The <a href="https://open.canada.ca/data/en/dataset/7f625e97-9d02-4c12-a756-1ddebb50e69f" target="_blank" rel="noopener">open datasets</a> carry organization by demographic in Subset 3.</div>
+
+  <section class="block">
+    <h3>The public-service benchmarks to read ISC against</h3>
+    <p>ISC's own numbers may sit above or below each of these. The comparison is the work.</p>
+    <div class="card flush"><div class="tablewrap">
+      <table>
+        <caption>2024 PSES, public service wide. Source: TBS and Statistics Canada published results by question.</caption>
+        <thead><tr><th scope="col">Measure</th><th scope="col" class="num">PS-wide 2024</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Victim of discrimination, past 12 months</th><td class="num">9%</td></tr>
+          <tr><th scope="row">Of those, cited race as a type</th><td class="num">33%</td></tr>
+          <tr><th scope="row">Discrimination came from someone with authority over them</th><td class="num">75%</td></tr>
+          <tr><th scope="row">Victim of harassment, past 12 months</th><td class="num">12%</td></tr>
+          <tr><th scope="row">Could start a formal recourse process without fear of reprisal</th><td class="num">51%</td></tr>
+          <tr><th scope="row">Satisfied with how racism complaints are resolved</th><td class="num">11%</td></tr>
+        </tbody>
+      </table>
+    </div></div>
+    <p class="src">2024 Public Service Employee Survey, results for the public service. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Indigenous employees across the public service</h3>
+    <p>The most recent published PSES breakdown for Indigenous respondents as a group, the 2022 cycle public-service-wide, put harassment at 18 percent and discrimination at 13 percent, both above the all-employee average. That cycle counted 2,958 First Nations, 3,440 Métis and 275 Inuit respondents, which is itself a reminder that "Indigenous" is three distinct experiences. ISC's 2024 figures for its Indigenous employees specifically sit in the demographic dashboards above, and for a department where Indigenous staff are the largest equity group, that is the single most useful query to run.</p>
+    <p class="src">2022 PSES results for Indigenous groups, public service wide: harassment 18%, discrimination 13%. The 2024 ISC demographic cut is dashboard-served. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Indigenous experience is three experiences <span class="tag">2022 cycle</span></h3>
+    <p>The label "Indigenous" averages First Nations, Inuit and Métis into one line. The most recent published subgroup breakdown shows they do not move together, which matters for a department serving each nation distinctly. Inuit respondents reported harassment at 15 percent in 2022. The table below carries the measures published for all Indigenous respondents and for First Nations.</p>
+    <div class="card flush"><div class="tablewrap">
+      <table>
+        <caption>2022 PSES, public service wide, affirmative results. Source: TBS 2022 PSES results for Indigenous groups.</caption>
+        <thead><tr><th scope="col">Measure</th><th scope="col" class="num">All Indigenous</th><th scope="col" class="num">First Nations</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Felt valued at work</th><td class="num">67%</td><td class="num">71%</td></tr>
+          <tr><th scope="row">High or very high work-related stress</th><td class="num">21%</td><td class="num">20%</td></tr>
+          <tr><th scope="row">Harassment, past 12 months</th><td class="num">18%</td><td class="num">17%</td></tr>
+          <tr><th scope="row">Discrimination, past 12 months</th><td class="num">13%</td><td class="num">12%</td></tr>
+        </tbody>
+      </table>
+    </div></div>
+    <p class="src">2022 PSES results for Indigenous groups (2,958 First Nations, 3,440 Métis, 275 Inuit respondents). <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Compare ISC to the public service <span class="tag">paste ISC's org-17 figures</span></h3>
+    <p>ISC's own 2024 figures are dashboard-served, not embeddable here. Pull the four numbers below from ISC's <a href="https://www.tbs-sct.canada.ca/pses-saff/2024/results-resultats/en/bq-pq/index" target="_blank" rel="noopener">org-17 results page</a>, enter them, and the tool shows where ISC sits against the public service and which way the gap runs.</p>
+    <div class="tool cmp">
+      <div class="row">
+        <div class="field"><label for="cdis">Victim of discrimination, 12 months (%)</label><input type="number" id="cdis" step="0.1" min="0" max="100" placeholder="PS-wide: 9"></div>
+        <div class="field"><label for="char">Victim of harassment, 12 months (%)</label><input type="number" id="char" step="0.1" min="0" max="100" placeholder="PS-wide: 12"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="crec">Could start recourse without fear of reprisal (%)</label><input type="number" id="crec" step="0.1" min="0" max="100" placeholder="PS-wide: 51"></div>
+        <div class="field"><label for="crac">Satisfied with how racism complaints are resolved (%)</label><input type="number" id="crac" step="0.1" min="0" max="100" placeholder="PS-wide: 11"></div>
+      </div>
+      <div style="margin-top:8px"><button class="btn primary" id="cmpBtn" type="button">Compare to public service</button></div>
+      <div class="calc-out" id="cmpOut" aria-live="polite">Enter ISC's figures, then compare.</div>
+      <p class="src" style="margin-top:8px">Public-service benchmarks: discrimination 9%, harassment 12%, recourse-without-reprisal 51%, racism-resolution satisfaction 11% (2024 PSES). For discrimination and harassment, lower is better; for the other two, higher is better. <span class="chip enter">enter</span> <span class="chip computed">computed</span></p>
+    </div>
+  </section>
+
+  <div class="callout warn"><h4>Read it next to the accommodation data, not alone</h4>ISC's consultations already confirm the survey trend that accommodation requests rose sharply from 2020 to 2024. When you pull ISC's 2024 PSES disability and Indigenous breakdowns, set them beside the <a href="#" data-go="3">accommodation findings</a>. Two sources agreeing is stronger than either by itself, and it is harder for a senior table to wave away.</div>
+</div>
+
+<!-- ===== 06 BARRIER REGISTER ===== -->
+<div class="panel" id="p5" role="tabpanel" aria-labelledby="t5" tabindex="0">
+  <h2>Barrier register</h2>
+  <p class="sub">Each barrier below is built the same way: the issue, the risk in legal and organizational terms, the recommendation, the data that would prove or kill it, and the instrument it attaches to. These are screening signals drawn from published figures, leads to test, not findings of non-compliance. Filter by what you are working on, then open one to see the full case.</p>
+
+  <div class="filterbar">
+    <label for="bfilter">Show barriers tagged</label>
+    <select id="bfilter">
+      <option value="all">All</option>
+      <option value="disability">Disability</option>
+      <option value="racialized">Racialized employees</option>
+      <option value="indigenous">Indigenous subgroup</option>
+      <option value="executive">Executive / advancement</option>
+      <option value="data">Data integrity</option>
+      <option value="intersectional">Intersectional</option>
+      <option value="retention">Retention / restructuring</option>
+    </select>
+    <button class="btn" id="copyAllBar" type="button">Copy shown as briefing summary</button>
+    <span id="bcount" class="src" aria-live="polite"></span>
+  </div>
+
+  <div id="barriers">
+    <details class="barrier" data-tags="disability intersectional retention">
+      <summary><span class="bid">B1</span><span><span class="btitle">The disability triple bind</span><span class="btags">disability · intersectional · retention</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>Disability sits 3.9 points below ISC's benchmark (8.1% vs 12.0%, 320 people short) while the accommodation process is failing the people already inside. Recruitment, accommodation and retention are breaking at once.</dd>
+          <dt>Risk</dt><dd>A psychological hazard left unaddressed under Canada Labour Code Part II, and a failure of the duty to accommodate and to identify barriers under the Employment Equity Act and the Accessible Canada Act. Years-long accommodation delays are documented, which raises legal and grievance exposure and feeds avoidable separations.</dd>
+          <dt>Recommendation</dt><dd>Treat hiring, accommodation and retention as one program, not three projects. Publish request-to-implementation time as a standing metric. Hold the "yes by default" redesign to a measured drop in that time.</dd>
+          <dt>Unearth with</dt><dd>Accommodation request-to-implementation time by year 2020 to 2025, with disability separations alongside.</dd>
+        </dl>
+        <div class="hook">Hooks: Accessible Canada Act · Employment Equity Act s.5 · Canada Labour Code Part II (psychological hazard)</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier" data-tags="racialized">
+      <summary><span class="bid">B2</span><span><span class="btitle">The racialized shortfall nobody is watching</span><span class="btags">racialized</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>Racialized representation is 2.7 points below benchmark, 227 people short, and gets little attention in a department focused, for good reason, on Indigenous employees. ISC's own accessibility plan names racialized, Black and 2SLGBTQI+ staff as facing compounded barriers.</dd>
+          <dt>Risk</dt><dd>A blind spot that a Canadian Human Rights Commission horizontal audit or a complaint could surface before ISC does. The Clerk's Call to Action expects measurable progress for racialized and Black employees, and ISC reports against it.</dd>
+          <dt>Recommendation</dt><dd>Disaggregate "visible minority" into its subgroups for ISC, because the label hides opposite realities. Set Black-employee representation and advancement as a named line, not a footnote inside an aggregate.</dd>
+          <dt>Unearth with</dt><dd>Visible-minority subgroup representation and promotion for ISC, from the PSC dashboard; Black-employee separations against hires.</dd>
+        </dl>
+        <div class="hook">Hooks: Employment Equity Act s.5 · Canadian Human Rights Act s.7 &amp; s.10 · Clerk's Call to Action</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier" data-tags="indigenous executive">
+      <summary><span class="bid">B3</span><span><span class="btitle">Served population is not workforce</span><span class="btags">indigenous · executive</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>ISC serves First Nations, Inuit and Métis, but its 27.4% Indigenous representation is one aggregate. It does not show whether each nation is present at every level, or whether Inuit are underrepresented relative to the northern communities ISC serves directly.</dd>
+          <dt>Risk</dt><dd>A reconciliation mandate undercut from inside if the people serving distinct nations do not reflect those nations in decisions. A reputational and UN Declaration Act alignment risk, not only an HR one.</dd>
+          <dt>Recommendation</dt><dd>Report Indigenous representation by subgroup and by level, set against the populations ISC serves, on a standing basis. Make the executive cadre the first cut.</dd>
+          <dt>Unearth with</dt><dd>First Nations, Inuit, Métis representation by classification and EX level, from EEDB and the PSC dashboard.</dd>
+        </dl>
+        <div class="hook">Hooks: Department of Indigenous Services Act (2019) · UN Declaration Act · Employment Equity Act s.5 · Clerk's Call to Action</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier" data-tags="executive indigenous">
+      <summary><span class="bid">B4</span><span><span class="btitle">The executive blind spot</span><span class="btags">executive · indigenous</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>ISC's representation by executive level, overall and by Indigenous subgroup, is not published at the department grain. The single most important number for advancement is the one the public record withholds.</dd>
+          <dt>Risk</dt><dd>Entry-level progress can mask a ceiling. Without the EX-by-level cut, ISC cannot tell senior management whether its Indigenous representation survives the climb, and cannot answer a Call to Action question it is on record supporting.</dd>
+          <dt>Recommendation</dt><dd>Request and table ISC executive representation by group and Indigenous subgroup, EX-01 to EX-05, into the senior management cycle. Pair it with acting appointments, the feeder no table prints.</dd>
+          <dt>Unearth with</dt><dd>ISC executive population by group and level; acting appointments by group, subgroup and duration.</dd>
+        </dl>
+        <div class="hook">Hooks: Employment Equity Act s.5 · Clerk's Call to Action · Public Service Employment Act</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier mild" data-tags="data">
+      <summary><span class="bid">B5</span><span><span class="btitle">Trust collapse corrupts the data itself</span><span class="btags">data integrity</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>Representation counts only voluntary self-identification. Where trust is lowest, people self-identify least, so the data understates the problem in exactly the units where it is worst.</dd>
+          <dt>Risk</dt><dd>Decisions built on a count that is itself an outcome of the problem. A clean-looking unit may simply be a silent one.</dd>
+          <dt>Recommendation</dt><dd>Track self-ID completion rate by sector as a trust indicator, reported alongside representation, not buried as a data-quality caveat.</dd>
+          <dt>Unearth with</dt><dd>Self-ID completion rate by sector and over time, from EEDB.</dd>
+        </dl>
+        <div class="hook">Hooks: Employment Equity Act s.5 (barrier identification) · data governance</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier mild" data-tags="intersectional disability indigenous">
+      <summary><span class="bid">B6</span><span><span class="btitle">Intersection nobody disaggregates</span><span class="btags">intersectional · disability · indigenous</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>ISC's Talking Circles surfaced compounded barriers for Indigenous employees with disabilities, and the accessibility plan names racialized employees with disabilities too. Single-axis reporting cannot see people who sit at more than one.</dd>
+          <dt>Risk</dt><dd>Accommodation and recruitment fixes designed for a single group miss the people carrying two or three identities, who federal recruitment audits show fall out fastest.</dd>
+          <dt>Recommendation</dt><dd>Report at least one intersectional cut routinely: Indigenous and disability, and racialized and disability, for representation and accommodation outcomes.</dd>
+          <dt>Unearth with</dt><dd>Representation and accommodation outcomes for intersecting groups, from EEDB and accommodation tracking.</dd>
+        </dl>
+        <div class="hook">Hooks: Employment Equity Act s.5 · Accessible Canada Act · Canadian Human Rights Act</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier mild" data-tags="retention">
+      <summary><span class="bid">B7</span><span><span class="btitle">Restructuring exits, counted as ordinary separations</span><span class="btags">retention · restructuring</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>ISC began a Sustainability Review in February 2025 and a structural realignment in September 2025. Separation data does not distinguish a workforce-adjustment exit from a voluntary one or a retirement.</dd>
+          <dt>Risk</dt><dd>Equity groups absorbing a disproportionate share of restructuring exits, invisible in an aggregate separation number, and a duty-to-accommodate failure if disabled employees are not protected through redeployment.</dd>
+          <dt>Recommendation</dt><dd>Monitor separations by group and by reason through the realignment, and report disabled-employee redeployment outcomes specifically.</dd>
+          <dt>Unearth with</dt><dd>Separations by group, subgroup and reason, fiscal 2024-25 forward; redeployment outcomes by disability status.</dd>
+        </dl>
+        <div class="hook">Hooks: Employment Equity Act s.5 · Accessible Canada Act · Work Force Adjustment directive</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+
+    <details class="barrier" data-tags="data racialized indigenous executive">
+      <summary><span class="bid">B8</span><span><span class="btitle">The accountability gap: ISC names systemic racism, then cannot measure its own</span><span class="btags">data · racialized · indigenous · executive</span></span></summary>
+      <div class="body">
+        <dl class="irr">
+          <dt>Issue</dt><dd>ISC's mandate is framed around confronting systemic racism and discrimination rooted in colonialism. Yet the internal data that would show whether the same patterns run inside ISC, executive representation by subgroup, discrimination by group, resolution outcomes, is not published at the department grain.</dd>
+          <dt>Risk</dt><dd>A credibility gap a complaint, an audit or an Ombuds review can open. A department cannot hold the health system to Joyce's Principle while declining to measure anti-Indigenous and anti-Black patterns in its own workforce.</dd>
+          <dt>Recommendation</dt><dd>Build a standing internal equity dashboard, executive-by-subgroup, PSES discrimination-by-group, complaint-resolution satisfaction, feeding the senior management cycle through the Ombuds Organizational Feedback mechanism.</dd>
+          <dt>Unearth with</dt><dd>ISC PSES discrimination and harassment by demographic group; executive representation by subgroup; complaint-resolution satisfaction by group.</dd>
+        </dl>
+        <div class="hook">Hooks: Canadian Human Rights Act s.7 &amp; s.10 · Canada Labour Code Part II · Employment Equity Act s.5 · Clerk's Call to Action</div>
+        <p class="ask"><a href="#" data-go="6">Generate the data request →</a></p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ===== 07 REQUEST THE DATA ===== -->
+<div class="panel" id="p6" role="tabpanel" aria-labelledby="t6" tabindex="0">
+  <h2>Request the data ISC holds but does not publish</h2>
+  <p class="sub">The barrier register points at internal datasets. This generator writes the formal request: it names each source system, attaches the legal instrument, and builds in the suppression and format rules so the answer comes back usable. Tick what you need, set who is asking and who receives it, and copy the result into an email or a note.</p>
+
+  <div class="tool">
+    <h3>Data request generator</h3>
+    <fieldset>
+      <legend>1 · What do you need</legend>
+      <div id="datasets">
+        <label class="check"><input type="checkbox" value="exec"><span>Executive representation by group and Indigenous subgroup, EX-01 to EX-05<span class="meta">system: TBS executive population statistics / EEDB · hook: EEA s.5, Call to Action</span></span></label>
+        <label class="check"><input type="checkbox" value="acting"><span>Acting appointments by group, subgroup and duration<span class="meta">system: PSC staffing files / EEDB · hook: EEA s.5, PSEA</span></span></label>
+        <label class="check"><input type="checkbox" value="subgroup"><span>First Nations, Inuit and Métis representation by classification and level<span class="meta">system: EEDB matched to pay · hook: EEA s.5, Dept of Indigenous Services Act</span></span></label>
+        <label class="check"><input type="checkbox" value="accom"><span>Accommodation request-to-implementation time, by year, with separations<span class="meta">system: ISC Workforce Relations accommodation tracking · hook: Accessible Canada Act, CLC Part II</span></span></label>
+        <label class="check"><input type="checkbox" value="selfid"><span>Self-identification completion rate by sector and over time<span class="meta">system: EEDB self-ID · hook: EEA s.5 (barrier identification)</span></span></label>
+        <label class="check"><input type="checkbox" value="pses"><span>ISC PSES discrimination and harassment by demographic group<span class="meta">system: PSES demographic dashboard (org 17) · hook: CHRA s.7 &amp; s.10, CLC Part II</span></span></label>
+        <label class="check"><input type="checkbox" value="vmsub"><span>Visible-minority subgroup representation and promotion (incl. Black employees)<span class="meta">system: PSC dashboard / EEDB · hook: EEA s.5, Call to Action</span></span></label>
+        <label class="check"><input type="checkbox" value="sep"><span>Separations by group, subgroup and reason, disaggregated from retirements<span class="meta">system: EEDB / pay · hook: EEA s.5 (retention)</span></span></label>
+        <label class="check"><input type="checkbox" value="lang"><span>Second-language training allocation by employment equity group<span class="meta">system: ISC learning records · hook: EEA s.5, Official Languages Act</span></span></label>
+      </div>
+    </fieldset>
+    <div class="row">
+      <div class="field"><label for="reqbody">2 · Who is asking</label>
+        <select id="reqbody">
+          <option>IDEAA Task Force, Indigenous Services Canada</option>
+          <option>Office of the Ombuds, Indigenous Services Canada</option>
+          <option>Anti-Racism Liaison, Ombuds Office, Indigenous Services Canada</option>
+          <option>Indigenous Employee Network</option>
+          <option>Accessibility Employee Network</option>
+        </select>
+      </div>
+      <div class="field"><label for="recip">3 · Who receives it</label>
+        <select id="recip">
+          <option>Director General, Human Resources, ISC</option>
+          <option>Head of HR data and reporting, ISC</option>
+          <option>Deputy Minister, Indigenous Services Canada</option>
+          <option>TBS Office of the Chief Human Resources Officer (OCHRO)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label for="purpose">4 · Purpose (optional, one line)</label>
+      <textarea id="purpose" rows="2" placeholder="e.g. to brief the Senior Management Committee on advancement barriers ahead of the next IDEAA Leadership Council cycle"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+      <button class="btn primary" id="genBtn" type="button">Generate request</button>
+      <button class="btn" id="copyReq" type="button" hidden>Copy request</button>
+    </div>
+    <div class="output" id="reqOut" aria-live="polite" hidden></div>
+    <p class="src" style="margin-top:10px">The generator assembles published source-system names and legal hooks. Confirm the recipient and timeline against your own governance before sending. <span class="chip enter">enter</span></p>
+  </div>
+
+  <div class="tool">
+    <h3>Gap calculator</h3>
+    <p style="color:var(--ink-2);margin:.2em 0 0;font-size:14.5px">Enter any group's numbers, including next year's when the 2024-25 figures land, and read the gap in people and points. Expected equals headcount times availability.</p>
+    <div class="row">
+      <div class="field"><label for="hc">ISC headcount in scope</label><input type="number" id="hc" value="8148" min="1"></div>
+      <div class="field"><label for="rep">Representation (%)</label><input type="number" id="rep" value="8.1" step="0.1" min="0" max="100"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="wfa">ISC workforce availability (%)</label><input type="number" id="wfa" value="12.0" step="0.1" min="0" max="100"></div>
+      <div class="field" style="justify-content:flex-end"><button class="btn primary" id="calcBtn" type="button" style="margin-top:auto">Calculate gap</button></div>
+    </div>
+    <div class="calc-out" id="calcOut" aria-live="polite">Enter values and select Calculate gap.</div>
+    <p class="src" style="margin-top:8px">Computed from your inputs. A gap is a screening signal against ISC's own availability, not a finding. <span class="chip computed">computed</span></p>
+  </div>
+</div>
+
+<!-- ===== 08 CONTEXT ===== -->
+<div class="panel" id="p7" role="tabpanel" aria-labelledby="t7" tabindex="0">
+  <h2>Context behind the numbers</h2>
+  <p class="sub">Three facts change how ISC's data should be read: it is a young department still forming its identity, it delivers mostly through partners and in the regions rather than the capital, and it only took control of its own HR in 2024.</p>
+
+  <section class="block">
+    <h3>A young department that names the harm</h3>
+    <p>ISC was created by Order-in-Council in November 2017 and established by the Department of Indigenous Services Act on July 15, 2019, out of the dissolved Department of Indian Affairs and Northern Development. Its mandate is to support First Nations, Inuit and Métis in taking control of service delivery. Its own reports frame that work as confronting systemic racism and discrimination rooted in colonialism. For an employer, that self-description sets a higher bar: the internal workforce data has to stand up to the standard ISC applies to the systems it funds.</p>
+    <p class="src">ISC Info Source; ISC 2024-25 Departmental Results Report. <span class="chip official">official</span></p>
+  </section>
+
+  <section class="block">
+    <h3>Regional and northern, not capital-centric</h3>
+    <p>Most ISC services reach communities through transfer-payment agreements and direct delivery in the regions and the North: primary care and public-health nursing, Jordan's Principle, the Inuit Child First Initiative, status registration, environmental public health. That footprint is why ISC's departmental availability for Indigenous Peoples (5.7%) sits above the national line; the benchmark already reflects where ISC works. It is also why regional and northern roles, where many Indigenous employees sit, deserve their own cut rather than disappearing into a department average.</p>
+  </section>
+
+  <section class="block">
+    <h3>New HR, mid-restructure</h3>
+    <ul class="tight">
+      <li><b>2024:</b> ISC stood up its own HR service, ending the shared model with CIRNAC in place since 2019. Equity actions can now be targeted and measured against ISC's own reporting.</li>
+      <li><b>February 2025:</b> a Sustainability Review Strategy began, to decide what is core to ISC's service-delivery mission.</li>
+      <li><b>September 2025:</b> a realignment toward a one-ISC, single-window regional delivery model and an enhanced digital approach for individual clients.</li>
+    </ul>
+    <p>Restructuring is the backdrop to every retention number in this tool. A separation during a realignment is not a voluntary exit, and the aggregate data does not tell them apart. Read separation figures in that light, and see barrier B7.</p>
+    <p class="src">ISC 2026-2028 Accessibility Plan, "About this plan" and "Design and delivery." <span class="chip official">official</span></p>
+  </section>
+</div>
+
+<!-- ===== 09 SOURCES & ACCESS ===== -->
+<div class="panel" id="p8" role="tabpanel" aria-labelledby="t8" tabindex="0">
+  <h2>Sources, limits and accessibility</h2>
+  <p class="sub">Every figure here is transcribed from a published Government of Canada source. Nothing is estimated, interpolated or modelled. Computed values are gaps and shares worked directly from official figures. Hypotheses carry the interpretation label.</p>
+
+  <section class="block">
+    <h3>Definitions you need</h3>
+    <details class="def"><summary>Workforce availability (WFA)</summary>The estimated share of a designated group in the Canadian workforce who could be recruited into the relevant jobs, from the 2021 Census and 2022 Canadian Survey on Disability. This tool uses ISC's departmental WFA, which reflects ISC's occupations and regions, not the public-service line. It is the legal benchmark under the Employment Equity Act, and TBS calls it a starting point, not a ceiling.</details>
+    <details class="def"><summary>Representation</summary>The share of employees who voluntarily self-identify with a group. Because self-ID is voluntary, true numbers may be higher than reported. Sex is taken from the pay system.</details>
+    <details class="def"><summary>Expected number and gap</summary>Expected equals headcount times the group's ISC WFA. Gap is actual minus expected, shown in people and in points. A negative gap is a screening signal, not a finding.</details>
+    <details class="def"><summary>Suppression</summary>Counts of 1 to 5 are withheld to protect privacy, shown as "supp." A suppressed cell is not zero.</details>
+    <details class="def"><summary>Indigenous subgroups</summary>First Nations, Inuit and Métis, recognized under section 35(2) of the Constitution Act, 1982. ISC's subgroup split is published only in the PSC dashboard.</details>
+  </section>
+
+  <section class="block">
+    <h3>The limits of this tool, stated plainly</h3>
+    <ul class="tight">
+      <li><b>Date.</b> ISC representation is the March 31, 2024 cycle, the most recent published at the departmental-plus-WFA grain. The 2024-25 report gives public-service totals; ISC's 2024-25 departmental row sits in the Demographic Snapshot Appendix Table 1, linked below.</li>
+      <li><b>No executive grain.</b> ISC representation by EX level, and by Indigenous subgroup at the top, is not published per department. The most important number this tool cannot show, which is why barrier B4 and the generator exist.</li>
+      <li><b>Disability WFA carries a measurement effect.</b> The 12.0% benchmark uses the broader 2017+ survey definition the current self-ID form does not match, so part of the 8.1% gap is measurement. TBS expects the modernized form to close some of it.</li>
+      <li><b>PSES is linked, not embedded.</b> ISC's own results and demographic breakdowns are dashboard-served. This tool embeds the public-service benchmarks and deep-links ISC (org 17).</li>
+      <li><b>Separations include retirements and restructuring exits</b> and the data does not separate them.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>Where ISC's live data sits</h3>
+    <ul class="tight">
+      <li><a href="https://www5.psc-cfp.gc.ca/dsad-dsda/ee-by-org/index-en.html" target="_blank" rel="noopener">PSC employment equity by organization</a>: ISC subgroup employees, applicants, hires, promotions, acting appointments</li>
+      <li><a href="https://www.tbs-sct.canada.ca/pses-saff/2024/results-resultats/en/bq-pq/index" target="_blank" rel="noopener">2024 PSES results by question</a>: select Indigenous Services Canada (org 17)</li>
+      <li><a href="https://www.canada.ca/en/treasury-board-secretariat/services/innovation/human-resources-statistics/diversity-inclusion-statistics.html" target="_blank" rel="noopener">TBS diversity and inclusion statistics</a>: annual report and Demographic Snapshot, including 2024-25 Appendix Table 1</li>
+      <li><a href="https://www.sac-isc.gc.ca/eng/1766002791478/1766002810081" target="_blank" rel="noopener">ISC and IOGC 2026-2028 Accessibility Plan</a>: accommodation audit, consultations, commitments</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>Data files: where each dataset lives</h3>
+    <p>The dashboards are windows. These are the warehouses. Use this to pull a figure straight from source or point a colleague to the exact file.</p>
+    <div class="card flush"><div class="tablewrap">
+      <table>
+        <caption>Machine-readable releases and the dashboards behind this tool.</caption>
+        <thead><tr><th scope="col">Family</th><th scope="col">What is in it</th><th scope="col">Where it lives</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">PSES 2024 open data</th><td>Results by organization, by demographic group, and organization by demographic (Subset 3 carries ISC by group).</td><td><a href="https://open.canada.ca/data/en/dataset/7f625e97-9d02-4c12-a756-1ddebb50e69f" target="_blank" rel="noopener">Open Government portal</a></td></tr>
+          <tr><th scope="row">PSES 2024 published tables</th><td>Results by question for ISC (organization 17) and every other organization.</td><td><a href="https://www.tbs-sct.canada.ca/pses-saff/2024/results-resultats/en/bq-pq/index" target="_blank" rel="noopener">Results-by-question index</a></td></tr>
+          <tr><th scope="row">TBS employment equity tables</th><td>Representation by department, subgroup, salary, occupation, region, hires, promotions, separations, with departmental WFA.</td><td><a href="https://www.canada.ca/en/treasury-board-secretariat/services/innovation/human-resources-statistics/diversity-inclusion-statistics.html" target="_blank" rel="noopener">TBS diversity statistics hub</a></td></tr>
+          <tr><th scope="row">PSC staffing &amp; subgroup dashboard</th><td>ISC employees, applicants, hires, promotions and acting appointments by group and Indigenous subgroup.</td><td><a href="https://www5.psc-cfp.gc.ca/dsad-dsda/ee-by-org/index-en.html" target="_blank" rel="noopener">PSC EE by organization</a></td></tr>
+          <tr><th scope="row">ISC accessibility plans</th><td>Accommodation audit, the BAP findings, Indigenous Talking Circles, commitments.</td><td><a href="https://www.sac-isc.gc.ca/eng/1766002791478/1766002810081" target="_blank" rel="noopener">ISC and IOGC 2026-2028 plan</a></td></tr>
+          <tr><th scope="row">Employment Equity Data Bank (EEDB)</th><td>The upstream self-ID database matched to pay and staffing. Reaches the public through the tables and dashboards above, and through internal requests.</td><td>Internal to TBS-OCHRO; name it in requests</td></tr>
+        </tbody>
+      </table>
+    </div></div>
+  </section>
+
+  <section class="block">
+    <h3>Full source list</h3>
+    <ul class="tight">
+      <li>TBS Employment Equity representation by department tables with departmental WFA (women, Indigenous Peoples, persons with disabilities, members of visible minorities), March 31, 2024.</li>
+      <li>TBS Employment Equity in the Public Service of Canada 2024-25 and Demographic Snapshot 2024-2025 (published March 2026).</li>
+      <li>2024 PSES results for the public service (TBS and Statistics Canada); 2022 PSES results for Indigenous groups.</li>
+      <li>ISC and IOGC 2026-2028 and 2023-2025 Accessibility Plans; ISC 2024-25 Departmental Results Report; ISC Evaluation of efforts towards Reconciliation; ISC Info Source.</li>
+      <li>PSC employment equity by organization dashboard and staffing files.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h3>Accessibility of this page</h3>
+    <p>Built to WCAG 2.1 AA. Status is carried in text and symbols, not colour alone. Tabs follow the ARIA tab pattern with arrow-key navigation; tables use row and column headers and captions; the generator and calculator announce their output to screen readers; motion respects the reduced-motion setting; contrast meets AA for text. This is an English working version. A French version is required for any Government of Canada publication, and the structure is built so the content can be paired one to one.</p>
+    <p class="src">Compiled June 2026. Independent analytical tool, not a Government of Canada publication. It mirrors the public-service-wide GC-Equity / Équité-GC explorer, scoped to Indigenous Services Canada.</p>
+  </section>
+</div>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b>ISC Equity Data Explorer.</b> Built from published Government of Canada data, scoped to Indigenous Services Canada. Representation as of March 31, 2024; PSES benchmarks 2024 cycle. All values transcribed from official sources; suppressed counts stay suppressed; nothing estimated.</p>
+  <p>Screening signals are not findings of non-compliance. Each gap is a reason to investigate against ISC's own workforce availability. For the data this page cannot show, use <a href="#" data-go="6">Request the data</a>.</p>
+  <p class="src" style="color:#9fb3a9;margin-top:14px">Version 2.0 · last reviewed June 2026 · representation data March 31, 2024 cycle · next review when the 2024-25 Demographic Snapshot Appendix Table 1 publishes ISC's departmental row.</p>
+</div></footer>
+
+<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('[role="tab"]'));
+  var panels=[].slice.call(document.querySelectorAll('[role="tabpanel"]'));
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function select(i,focus){
+    tabs.forEach(function(t,j){
+      var on=j===i;
+      t.setAttribute('aria-selected',on); t.tabIndex=on?0:-1;
+      panels[j].classList.toggle('active',on);
+    });
+    if(focus) tabs[i].focus();
+    if(i===0) runBars();
+    if(history.replaceState){history.replaceState(null,'','#'+tabs[i].id);}
+  }
+  function selectFromHash(){
+    var h=(location.hash||'').replace('#','');
+    for(var k=0;k<tabs.length;k++){ if(tabs[k].id===h){select(k,false);return true;} }
+    return false;
+  }
+  tabs.forEach(function(t,i){
+    t.tabIndex=i===0?0:-1;
+    t.addEventListener('click',function(){select(i,false);});
+    t.addEventListener('keydown',function(e){
+      var n=null;
+      if(e.key==='ArrowRight')n=(i+1)%tabs.length;
+      if(e.key==='ArrowLeft')n=(i-1+tabs.length)%tabs.length;
+      if(e.key==='Home')n=0; if(e.key==='End')n=tabs.length-1;
+      if(n!==null){e.preventDefault();select(n,true);}
+    });
+  });
+  document.querySelectorAll('[data-go]').forEach(function(a){
+    a.addEventListener('click',function(e){e.preventDefault();select(parseInt(a.dataset.go,10),false);window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});});
+  });
+
+  // hero bars
+  function runBars(){
+    document.querySelectorAll('#hero-h, .hero .fill');
+    document.querySelectorAll('.hero .fill').forEach(function(f){
+      if(reduce){f.style.width=f.dataset.w+'%';return;}
+      f.style.width='0';
+      requestAnimationFrame(function(){setTimeout(function(){f.style.width=f.dataset.w+'%';},60);});
+    });
+  }
+  window.addEventListener('load',runBars);
+  window.addEventListener('load',selectFromHash);
+  window.addEventListener('hashchange',selectFromHash);
+
+  // copy / csv
+  function rows(t){return [].slice.call(t.querySelectorAll('tr')).map(function(tr){
+    return [].slice.call(tr.querySelectorAll('th,td')).map(function(c){return c.innerText.replace(/\s+/g,' ').trim();});});}
+  function flash(b,m){var o=b.textContent;b.textContent=m;setTimeout(function(){b.textContent=o;},1400);}
+  document.querySelectorAll('[data-copy]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var tsv=rows(document.getElementById(b.dataset.copy)).map(function(r){return r.join('\t');}).join('\n');
+      navigator.clipboard.writeText(tsv).then(function(){flash(b,'Copied');},function(){flash(b,'Press Ctrl+C');});
+    });
+  });
+  document.querySelectorAll('[data-csv]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var csv=rows(document.getElementById(b.dataset.csv)).map(function(r){return r.map(function(c){return '"'+c.replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+      var url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+      var a=document.createElement('a');a.href=url;a.download=b.dataset.name||'table.csv';a.click();URL.revokeObjectURL(url);flash(b,'Downloaded');
+    });
+  });
+
+  // barrier filter
+  var bf=document.getElementById('bfilter'), bc=document.getElementById('bcount');
+  var barriers=[].slice.call(document.querySelectorAll('#barriers .barrier'));
+  function applyFilter(){
+    var v=bf.value, shown=0;
+    barriers.forEach(function(d){
+      var ok = v==='all' || (d.dataset.tags||'').indexOf(v)>-1;
+      d.style.display=ok?'':'none'; if(ok)shown++;
+      if(!ok) d.open=false;
+    });
+    bc.textContent=shown+(shown===1?' barrier shown':' barriers shown');
+  }
+  if(bf){bf.addEventListener('change',applyFilter);applyFilter();}
+
+  // build a briefing-note string from one barrier
+  function barrierText(d){
+    var title=(d.querySelector('.btitle')||{}).textContent||'';
+    var id=(d.querySelector('.bid')||{}).textContent||'';
+    var out=id+' · '+title+'\n';
+    d.querySelectorAll('.irr dt').forEach(function(dt){
+      var dd=dt.nextElementSibling;
+      out+='\n'+dt.textContent.toUpperCase()+': '+(dd?dd.textContent.trim():'');
+    });
+    var hook=d.querySelector('.hook');
+    if(hook) out+='\n\n'+hook.textContent.trim();
+    return out;
+  }
+  // inject a copy button into each barrier
+  barriers.forEach(function(d){
+    var ask=d.querySelector('.ask');
+    var b=document.createElement('button');
+    b.type='button'; b.className='btn'; b.textContent='Copy as briefing note';
+    b.style.marginLeft='14px';
+    b.addEventListener('click',function(e){
+      e.preventDefault(); e.stopPropagation();
+      navigator.clipboard.writeText(barrierText(d)).then(function(){flash(b,'Copied');},function(){flash(b,'Press Ctrl+C');});
+    });
+    if(ask){ask.appendChild(b);} else {d.querySelector('.body').appendChild(b);}
+  });
+  // copy all shown barriers as one summary
+  var copyAll=document.getElementById('copyAllBar');
+  if(copyAll){
+    copyAll.addEventListener('click',function(){
+      var shown=barriers.filter(function(d){return d.style.display!=='none';});
+      if(!shown.length){flash(copyAll,'Nothing shown');return;}
+      var head='ISC EQUITY BARRIER SUMMARY\nScreening signals from published data, scoped to Indigenous Services Canada. Leads to test, not findings.\n'+
+        'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+'\n\n';
+      var txt=head+shown.map(barrierText).join('\n\n----------------------------------------\n\n');
+      navigator.clipboard.writeText(txt).then(function(){flash(copyAll,'Copied '+shown.length);},function(){flash(copyAll,'Press Ctrl+C');});
+    });
+  }
+
+  // data request generator
+  var DEF={
+    exec:{label:'Executive representation by group and Indigenous subgroup (EX-01 to EX-05)',sys:'TBS executive population statistics, matched to the Employment Equity Data Bank (EEDB)',hooks:['Employment Equity Act s.5','Clerk\u2019s Call to Action'],dis:'by designated group and by First Nations / Inuit / M\u00e9tis, at each EX level'},
+    acting:{label:'Acting appointments, four months or more',sys:'PSC staffing activity files and the EEDB',hooks:['Employment Equity Act s.5','Public Service Employment Act'],dis:'by group, subgroup, level and duration'},
+    subgroup:{label:'First Nations, Inuit and M\u00e9tis representation',sys:'EEDB matched to the pay system',hooks:['Employment Equity Act s.5','Department of Indigenous Services Act (2019)','UN Declaration Act'],dis:'by classification group and level, set against the populations ISC serves'},
+    accom:{label:'Accommodation request-to-implementation time',sys:'ISC Workforce Relations accommodation tracking',hooks:['Accessible Canada Act','Employment Equity Act s.5','Canada Labour Code Part II'],dis:'median and longest-tail by fiscal year 2020 to 2025, with disability separations alongside'},
+    selfid:{label:'Self-identification completion rate',sys:'EEDB self-identification records',hooks:['Employment Equity Act s.5'],dis:'by sector and over time, as a trust indicator reported beside representation'},
+    pses:{label:'PSES discrimination and harassment results for ISC',sys:'PSES demographic dashboard (ISC is organization 17) and open datasets',hooks:['Canadian Human Rights Act s.7 and s.10','Canada Labour Code Part II'],dis:'by demographic group, including Indigenous identity, disability and racialized status, with resolution-satisfaction'},
+    vmsub:{label:'Visible-minority subgroup representation and promotion, including Black employees',sys:'PSC employment equity by organization dashboard and the EEDB',hooks:['Employment Equity Act s.5','Clerk\u2019s Call to Action'],dis:'by subgroup, with Black-employee hires, promotions and separations as a named line'},
+    sep:{label:'Separations disaggregated from retirements',sys:'EEDB and the pay system',hooks:['Employment Equity Act s.5'],dis:'by group, subgroup and reason, fiscal 2024-25 forward'},
+    lang:{label:'Second-language training allocation',sys:'ISC learning and development records',hooks:['Employment Equity Act s.5','Official Languages Act'],dis:'by employment equity group'}
+  };
+  var genBtn=document.getElementById('genBtn'), reqOut=document.getElementById('reqOut'), copyReq=document.getElementById('copyReq');
+  function generate(){
+    var picked=[].slice.call(document.querySelectorAll('#datasets input:checked')).map(function(c){return c.value;});
+    if(!picked.length){reqOut.hidden=false;copyReq.hidden=true;reqOut.textContent='Select at least one dataset above, then generate.';return;}
+    var body=document.getElementById('reqbody').value;
+    var recip=document.getElementById('recip').value;
+    var purpose=document.getElementById('purpose').value.trim();
+    var hooks={};
+    var lines=picked.map(function(k,idx){
+      var d=DEF[k]; d.hooks.forEach(function(h){hooks[h]=1;});
+      return (idx+1)+'. '+d.label+'\n   Disaggregate '+d.dis+'.\n   Source system: '+d.sys+'.';
+    });
+    var hookList=Object.keys(hooks).map(function(h){return '   \u2022 '+h;}).join('\n');
+    var purposeLine = purpose ? purpose : 'to identify and act on employment barriers, and to brief senior management through the IDEAA Leadership Council and the Ombuds Organizational Feedback mechanism';
+    var out=
+'TO:   '+recip+'\n'+
+'FROM: '+body+'\n'+
+'RE:   Request for disaggregated employment equity data\n'+
+'DATE: '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+'\n'+
+'\n'+
+'Purpose\n'+
+'This request is made '+purposeLine+'. It attaches to the obligations cited below and is consistent with ISC\u2019s mandate commitment to confront systemic racism and discrimination.\n'+
+'\n'+
+'Data requested\n'+
+lines.join('\n')+'\n'+
+'\n'+
+'Format and handling\n'+
+'   \u2022 Provide as machine-readable files (CSV) with the accompanying data dictionary.\n'+
+'   \u2022 Apply standard suppression: counts of 1 to 5 withheld and marked "supp.", never shown as zero.\n'+
+'   \u2022 Where self-identification is the source, report the self-ID completion rate alongside, so representation can be read against response.\n'+
+'   \u2022 Provide a time series by fiscal year where the data exists.\n'+
+'   \u2022 Note ISC\u2019s departmental workforce availability for each group so gaps can be read against the correct benchmark.\n'+
+'\n'+
+'Legal and policy basis\n'+
+hookList+'\n'+
+'\n'+
+'Timeline\n'+
+'   We ask for a response within 20 business days, ahead of the next senior management cycle. Where a dataset cannot be produced in full, please provide what is available and a date for the remainder.\n'+
+'\n'+
+body;
+    reqOut.hidden=false;reqOut.textContent=out;copyReq.hidden=false;
+  }
+  if(genBtn){genBtn.addEventListener('click',generate);}
+  if(copyReq){copyReq.addEventListener('click',function(){navigator.clipboard.writeText(reqOut.textContent).then(function(){flash(copyReq,'Copied');},function(){flash(copyReq,'Press Ctrl+C');});});}
+
+  // gap calculator
+  var calcBtn=document.getElementById('calcBtn'), calcOut=document.getElementById('calcOut');
+  function calc(){
+    var hc=parseFloat(document.getElementById('hc').value);
+    var rep=parseFloat(document.getElementById('rep').value);
+    var wfa=parseFloat(document.getElementById('wfa').value);
+    if(isNaN(hc)||isNaN(rep)||isNaN(wfa)||hc<=0){calcOut.textContent='Enter a headcount, representation and availability.';return;}
+    var actual=Math.round(hc*rep/100), expected=Math.round(hc*wfa/100);
+    var gapN=actual-expected, gapP=(rep-wfa);
+    var below=gapP<0;
+    var sign=gapP<0?'\u2212':'+';
+    var v=below?'Below ISC availability':(Math.abs(gapP)<0.05?'At ISC availability':'At or above ISC availability');
+    calcOut.innerHTML='<span class="verdict '+(below?'down':'up')+'">'+v+'</span><br>'+
+      'Represented: <b>'+actual.toLocaleString('en-CA')+'</b> ('+rep+'%) &nbsp;·&nbsp; Expected at '+wfa+'%: <b>'+expected.toLocaleString('en-CA')+'</b><br>'+
+      'Gap: <b>'+sign+Math.abs(gapN).toLocaleString('en-CA')+' people</b> &nbsp;·&nbsp; <b>'+sign+Math.abs(gapP).toFixed(1)+' points</b>';
+  }
+  if(calcBtn){calcBtn.addEventListener('click',calc);calc();}
+
+  // PSES comparator
+  var cmpBtn=document.getElementById('cmpBtn'), cmpOut=document.getElementById('cmpOut');
+  function cmp(){
+    var defs=[
+      {id:'cdis',ps:9, hw:true, en:'Discrimination (12 mo)'},
+      {id:'char',ps:12,hw:true, en:'Harassment (12 mo)'},
+      {id:'crec',ps:51,hw:false,en:'Recourse without fear of reprisal'},
+      {id:'crac',ps:11,hw:false,en:'Satisfied with racism resolution'}
+    ];
+    var any=false, html='<div style="font-weight:700;font-family:\'Lato\',sans-serif;margin-bottom:6px">ISC vs public service</div>';
+    defs.forEach(function(d){
+      var el=document.getElementById(d.id); var v=parseFloat(el.value);
+      if(isNaN(v))return; any=true;
+      var diff=v-d.ps;
+      var better = d.hw ? diff<0 : diff>0;
+      var worse  = d.hw ? diff>0 : diff<0;
+      var arrow = better?'\u25B2 better':(worse?'\u25BC worse':'\u2014 same');
+      var cls = better?'better':(worse?'worse':'');
+      var sign = diff>0?'+':(diff<0?'\u2212':'');
+      html+='<div style="padding:5px 0;border-bottom:1px dashed var(--rule)">'+d.en+': <b>'+v+'%</b> vs '+d.ps+'% &nbsp; <span class="delta '+cls+'">'+sign+Math.abs(diff).toFixed(1)+' pts, '+arrow+'</span></div>';
+    });
+    cmpOut.innerHTML = any ? html : 'Enter at least one ISC figure, then compare.';
+  }
+  if(cmpBtn){cmpBtn.addEventListener('click',cmp);}
+})();
+</script>
+</body>
+</html>
