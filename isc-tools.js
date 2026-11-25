@@ -65,7 +65,7 @@ function mount(){
    branchRoots.push({render});render();
   }catch(e){box.innerHTML='<p role="alert">'+L('The focused branch view could not load. Use the complete branch source in the data library.','La vue par secteur n’a pas pu être chargée. Consultez la source complète par secteur dans la bibliothèque.',l)+'</p>';}finally{box.removeAttribute('aria-busy');}}
   document.addEventListener('isc:languagechange',()=>{if(data)render();});
-  if('IntersectionObserver'in window){const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){start();observer.disconnect();}},{rootMargin:'300px'});observer.observe(box);}else start();
+  start();
  });
 }
 return{difference,requestText,cellValue,branchRows,mount};
